@@ -68,7 +68,7 @@ else
   if windows_arch_i386?
     default_version "3.7.3"
 
-    source :url => "http://dbs-laptop/pkg/python-windows-#{version}-x86.zip",
+    source :url => "https://s3.amazonaws.com/dd-agent-omnibus/python-windows-#{version}-x86.zip",
             :sha256 => "27b8712d98251e861698f3282598001d2e52cbc8dd3743f14313b9c9afedd545"
   else
     dependency "vc_redist_14"
