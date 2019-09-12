@@ -714,11 +714,12 @@ kitchen_windows:
     - rm -rf $DD_AGENT_TESTING_DIR/.kitchen
     - mkdir $CI_PROJECT_DIR/kitchen_logs
     - ln -s $CI_PROJECT_DIR/kitchen_logs $DD_AGENT_TESTING_DIR/.kitchen
-    - export TEST_PLATFORMS="win2008r2,MicrosoftWindowsServer:WindowsServer:2008-R2-SP1:2.127.20190603"
-    - export TEST_PLATFORMS="$TEST_PLATFORMS|win2012,MicrosoftWindowsServer:WindowsServer:2012-Datacenter:3.127.20190603"
-    - export TEST_PLATFORMS="$TEST_PLATFORMS|win2012r2,MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4.127.20190603"
-    - export TEST_PLATFORMS="$TEST_PLATFORMS|win2016,MicrosoftWindowsServer:WindowsServer:2016-Datacenter-Server-Core:2016.127.20190603"
-    - export TEST_PLATFORMS="$TEST_PLATFORMS|win2019,MicrosoftWindowsServer:WindowsServer:2019-Datacenter-Core:2019.0.20190603"
+#    - export TEST_PLATFORMS="win2008r2,MicrosoftWindowsServer:WindowsServer:2008-R2-SP1:2.127.20190603"
+#    - export TEST_PLATFORMS="$TEST_PLATFORMS|win2012,MicrosoftWindowsServer:WindowsServer:2012-Datacenter:3.127.20190603"
+#    - export TEST_PLATFORMS="$TEST_PLATFORMS|win2012r2,MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4.127.20190603"
+#    - export TEST_PLATFORMS="$TEST_PLATFORMS|win2016,MicrosoftWindowsServer:WindowsServer:2016-Datacenter-Server-Core:2016.127.20190603"
+#    - export TEST_PLATFORMS="$TEST_PLATFORMS|win2019,MicrosoftWindowsServer:WindowsServer:2019-Datacenter-Core:2019.0.20190603"
+    - export TEST_PLATFORMS="win2016,MicrosoftWindowsServer:WindowsServer:2016-Datacenter-Server-Core:2016.127.20190603"
     - bash -l tasks/run-test-kitchen.sh
   artifacts:
     expire_in: 2 weeks

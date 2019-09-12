@@ -259,7 +259,7 @@ shared_examples_for 'Agent' do
   it_behaves_like 'an Agent with python3 enabled'
   it_behaves_like 'an Agent that stops'
   it_behaves_like 'an Agent that restarts'
-  it_behaves_like 'an Agent that is removed'
+  #it_behaves_like 'an Agent that is removed'
 end
 
 
