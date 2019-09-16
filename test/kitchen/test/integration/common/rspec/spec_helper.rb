@@ -56,6 +56,9 @@ def stop
   if os == :windows
     # forces the trace agent (and other dependent services) to stop
     result = system 'net stop /y datadogagent 2>&1'
+    puts "stop-out:"
+    puts result
+    puts "======"
   else
     if has_systemctl
       result = system 'sudo systemctl stop datadog-agent.service'
@@ -81,27 +84,27 @@ def start
   result
 end
 
-def restart
+def restart(timeout = 5)
   if os == :windows
     # forces the trace agent (and other dependent services) to stop
     if is_running?
       result = system 'net stop /y datadogagent 2>&1'
-      wait_until_stopped
+      wait_until_stopped timeout
     end
     result = system 'net start datadogagent 2>&1'
-    wait_until_started
+    wait_until_started timeout
   else
     if has_systemctl
       result = system 'sudo systemctl restart datadog-agent.service'
       # Worst case: the Agent has already stopped and restarted when we check if the process has been stopped
       # and we lose 5 seconds.
-      wait_until_stopped 5
-      wait_until_started 5
+      wait_until_stopped timeout
+      wait_until_started timeout
     else
       # initctl can't restart
       result = system '(sudo initctl restart datadog-agent || sudo initctl start datadog-agent)'
-      wait_until_stopped 5
-      wait_until_started 5
+      wait_until_stopped timeout
+      wait_until_started timeout
     end
   end
   result
@@ -128,7 +131,7 @@ end
 def status
   if os == :windows
     status_out = `sc interrogate datadogagent 2>&1`
-    puts status_out
+    #puts status_out
     status_out.include?('RUNNING')
   else
     if has_systemctl
@@ -227,7 +230,7 @@ def read_conf_file
     else
       conf_path = '/etc/datadog-agent/datadog.yaml'
     end
-    puts "cp is #{conf_path}"
+    #puts "cp is #{conf_path}"
     f = File.read(conf_path)
     confYaml = YAML.load(f)
     confYaml
@@ -290,7 +293,7 @@ shared_examples_for "an installed Agent" do
   
   
   it 'is properly signed' do
-    puts "swsc is #{skip_windows_signing_check}"
+    #puts "swsc is #{skip_windows_signing_check}"
     #puts "is an upgrade is #{is_upgrade}"
     if os == :windows and !skip_windows_signing_check
       # The user in the yaml file is "datadog", however the default test kitchen user is azure.
@@ -303,7 +306,7 @@ shared_examples_for "an installed Agent" do
       if File.file?(msi_path_upgrade)
         msi_path = msi_path_upgrade
       end
-      puts "checking file #{msi_path}"
+      #puts "checking file #{msi_path}"
       expect(File).to exist(msi_path)
       output = `powershell -command "get-authenticodesignature #{msi_path}"`
       signature_hash = "3B79DBE9410471E4FFBDFDAD646A83A1CD47D5AA"
@@ -480,7 +483,7 @@ shared_examples_for 'an Agent with python3 enabled' do
     confYaml["python_version"] = 3
     File.write(conf_path, confYaml.to_yaml)
 
-    output = restart
+    output = restart 30
     expect(output).to be_truthy
   end
 
@@ -505,7 +508,7 @@ shared_examples_for 'an Agent with python3 enabled' do
     confYaml["python_version"] = 2
     File.write(conf_path, confYaml.to_yaml)
 
-    output = restart
+    output = restart 30
     expect(output).to be_truthy
   end
 
