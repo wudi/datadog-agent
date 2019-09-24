@@ -148,7 +148,7 @@ func NewDatadogClient() (*datadog.Client, error) {
 	if appKey == "" || apiKey == "" {
 		return nil, errors.New("missing the api/app key pair to query Datadog")
 	}
-	log.Infof("Initialized the Datadog Client for Ref")
+	log.Infof("Initialized the Datadog Client")
 
 	return datadog.NewClient(apiKey, appKey), nil
 }
