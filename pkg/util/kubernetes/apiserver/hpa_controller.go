@@ -24,6 +24,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/custommetrics"
 	"github.com/DataDog/datadog-agent/pkg/errors"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/hpa"
+
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	v1alpha12 "github.com/DataDog/watermarkpodautoscaler/pkg/client/listers/datadoghq/v1alpha1"
 	"github.com/DataDog/watermarkpodautoscaler/pkg/apis/datadoghq/v1alpha1"
@@ -114,6 +115,7 @@ func (h *AutoscalersController) gc() {
 	if h.wpaEnabled {
 		listWPA, err = h.wpaLister.WatermarkPodAutoscalers(metav1.NamespaceAll).List(labels.Everything())
 		if err != nil {
+			log.Errorf("Error listing the WatermarkPodAutoscalers %v", err)
 			return
 		}
 	}
@@ -141,7 +143,7 @@ func (h *AutoscalersController) worker() {
 func (h *AutoscalersController) processNext() bool {
 	key, quit := h.queue.Get()
 	if quit {
-		log.Infof("Autoscaler queue is shutting down, stopping processing")
+		log.Infof("HPA controller queue is shutting down, stopping processing")
 		return false
 	}
 	log.Tracef("Processing %s", key)
@@ -159,7 +161,6 @@ func (h *AutoscalersController) processNext() bool {
 
 func (h *AutoscalersController) syncAutoscalers(key interface{}) error {
 	if !h.le.IsLeader() {
-		log.Trace("Only the leader needs to sync the Autoscalers")
 		return nil
 	}
 	h.mu.Lock()
@@ -171,7 +172,7 @@ func (h *AutoscalersController) syncAutoscalers(key interface{}) error {
 		return err
 	}
 
-	hpa, err := h.autoscalersLister.HorizontalPodAutoscalers(ns).Get(name)
+	hpaCached, err := h.autoscalersLister.HorizontalPodAutoscalers(ns).Get(name)
 	switch {
 	case errors.IsNotFound(err):
 		// The object was deleted before we processed the add/update handle. Local store does not have the Ref data anymore. The GC will clean up the Global Store.
@@ -179,11 +180,14 @@ func (h *AutoscalersController) syncAutoscalers(key interface{}) error {
 	case err != nil:
 		log.Errorf("Unable to retrieve Horizontal Pod Autoscaler %v from store: %v", key, err)
 	default:
-		if hpa == nil {
+		if hpaCached == nil {
 			log.Errorf("Could not parse empty hpa %s/%s from local store", ns, name)
 			return ErrIsEmpty
 		}
-		new := h.hpaProc.ProcessHPAs(hpa)
+		emList := hpa.Inspect(hpaCached)
+		new := h.hpaProc.ProcessEMList(emList)
+
+		//new := h.hpaProc.ProcessHPAs(hpa)
 		h.toStore.m.Lock()
 		for metric, value := range new {
 			// We should only insert placeholders in the local cache.
