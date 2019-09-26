@@ -68,8 +68,8 @@ func newFakeAutoscalerController(client kubernetes.Interface, itf LeaderElectorI
 		client,
 		itf,
 		dcl,
-		informerFactory.Autoscaling().V2beta1().HorizontalPodAutoscalers(),
 	)
+	ExtendToHPAController(autoscalerController, informerFactory.Autoscaling().V2beta1().HorizontalPodAutoscalers())
 
 	autoscalerController.autoscalersListerSynced = func() bool { return true }
 
@@ -90,7 +90,7 @@ type fakeDatadogClient struct {
 
 type fakeProcessor struct {
 	updateMetricFunc func(emList map[string]custommetrics.ExternalMetricValue) (updated map[string]custommetrics.ExternalMetricValue)
-	processFunc      func(hpa *autoscalingv2.HorizontalPodAutoscaler) map[string]custommetrics.ExternalMetricValue
+	processFunc      func(metrics []custommetrics.ExternalMetricValue) map[string]custommetrics.ExternalMetricValue
 }
 
 func (h *fakeProcessor) UpdateExternalMetrics(emList map[string]custommetrics.ExternalMetricValue) (updated map[string]custommetrics.ExternalMetricValue) {
@@ -99,9 +99,9 @@ func (h *fakeProcessor) UpdateExternalMetrics(emList map[string]custommetrics.Ex
 	}
 	return nil
 }
-func (h *fakeProcessor) ProcessHPAs(hpa *autoscalingv2.HorizontalPodAutoscaler) map[string]custommetrics.ExternalMetricValue {
+func (h *fakeProcessor) ProcessEMList(metrics []custommetrics.ExternalMetricValue) map[string]custommetrics.ExternalMetricValue {
 	if h.processFunc != nil {
-		return h.processFunc(hpa)
+		return h.processFunc(metrics)
 	}
 	return nil
 }
@@ -297,7 +297,10 @@ func TestAutoscalerController(t *testing.T) {
 	stop := make(chan struct{})
 	defer close(stop)
 	inf.Start(stop)
-	go hctrl.Run(stop)
+
+	go hctrl.RunHPA(stop)
+
+	hctrl.RunControllerLoop(stop)
 
 	c := client.AutoscalingV2beta1()
 	require.NotNil(t, c)

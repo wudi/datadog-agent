@@ -26,8 +26,8 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/hpa"
 
 	"github.com/DataDog/datadog-agent/pkg/util/log"
-	v1alpha12 "github.com/DataDog/watermarkpodautoscaler/pkg/client/listers/datadoghq/v1alpha1"
 	"github.com/DataDog/watermarkpodautoscaler/pkg/apis/datadoghq/v1alpha1"
+	v1alpha12 "github.com/DataDog/watermarkpodautoscaler/pkg/client/listers/datadoghq/v1alpha1"
 )
 
 const (
@@ -55,9 +55,9 @@ type metricsBatch struct {
 type AutoscalersController struct {
 	autoscalersLister       autoscalerslister.HorizontalPodAutoscalerLister
 	autoscalersListerSynced cache.InformerSynced
-	wpaEnabled      bool
-	wpaLister       v1alpha12.WatermarkPodAutoscalerLister
-	wpaListerSynced cache.InformerSynced
+	wpaEnabled              bool
+	wpaLister               v1alpha12.WatermarkPodAutoscalerLister
+	wpaListerSynced         cache.InformerSynced
 
 	// Autoscalers that need to be added to the cache.
 	queue workqueue.RateLimitingInterface
@@ -74,6 +74,20 @@ type AutoscalersController struct {
 	mu        sync.Mutex
 }
 
+// RunHPA starts the controller to process events about Horizontal Pod Autoscalers
+func (h *AutoscalersController) RunHPA(stopCh <-chan struct{}) {
+	defer h.queue.ShutDown()
+
+	log.Infof("Starting HPA Controller ... ")
+	defer log.Infof("Stopping HPA Controller")
+	if !cache.WaitForCacheSync(stopCh, h.autoscalersListerSynced) {
+		return
+	}
+	go wait.Until(h.worker, time.Second, stopCh)
+	<-stopCh
+}
+
+// ExtendToHPAController adds the handlers to the AutoscalersController to support HPAs
 func ExtendToHPAController(h *AutoscalersController, autoscalingInformer autoscalersinformer.HorizontalPodAutoscalerInformer) (*AutoscalersController, error) {
 	autoscalingInformer.Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
@@ -85,18 +99,6 @@ func ExtendToHPAController(h *AutoscalersController, autoscalingInformer autosca
 	h.autoscalersLister = autoscalingInformer.Lister()
 	h.autoscalersListerSynced = autoscalingInformer.Informer().HasSynced
 	return h, nil
-}
-
-func (h *AutoscalersController) RunHPA(stopCh <-chan struct{}) {
-	defer h.queue.ShutDown()
-
-	log.Infof("Starting HPA Controller ... ")
-	defer log.Infof("Stopping HPA Controller")
-	if !cache.WaitForCacheSync(stopCh, h.autoscalersListerSynced) {
-			return
-	}
-	go wait.Until(h.worker, time.Second, stopCh)
-	<- stopCh
 }
 
 // gc checks if any hpas have been deleted (possibly while the Datadog Cluster Agent was
@@ -186,8 +188,6 @@ func (h *AutoscalersController) syncAutoscalers(key interface{}) error {
 		}
 		emList := hpa.Inspect(hpaCached)
 		new := h.hpaProc.ProcessEMList(emList)
-
-		//new := h.hpaProc.ProcessHPAs(hpa)
 		h.toStore.m.Lock()
 		for metric, value := range new {
 			// We should only insert placeholders in the local cache.
@@ -284,4 +284,3 @@ func (h *AutoscalersController) deleteAutoscaler(obj interface{}) {
 		return
 	}
 }
-
