@@ -12,7 +12,6 @@ import (
 	"fmt"
 	_ "net/http/pprof"
 	"os"
-	"time"
 
 	"github.com/DataDog/datadog-agent/cmd/agent/app"
 	"github.com/DataDog/datadog-agent/cmd/agent/common"
@@ -56,7 +55,7 @@ type myservice struct{}
 func (m *myservice) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
-	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+
 	if err := common.ImportRegistryConfig(); err != nil {
 		elog.Warning(0x80000001, err.Error())
 		// continue running agent with existing config
@@ -65,14 +64,21 @@ func (m *myservice) Execute(args []string, r <-chan svc.ChangeRequest, changes c
 		elog.Warning(0x80000002, err.Error())
 		// continue running with what we have.
 	}
-	if err := app.StartAgent(); err != nil {
-		log.Errorf("Failed to start agent %v", err)
-		elog.Error(0xc000000B, err.Error())
-		errno = 1 // indicates non-successful return from handler.
-		changes <- svc.Status{State: svc.Stopped}
-		return
-	}
+
+	go func() {
+		if err := app.StartAgent(); err != nil {
+			log.Errorf("Failed to start agent %v", err)
+			elog.Error(0xc000000B, err.Error())
+			errno = 1 // indicates non-successful return from handler.
+			changes <- svc.Status{State: svc.Stopped}
+			signals.Stopper <- true
+		}
+	}()
+	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+	log.Info("Initialization completed, reported started")
+
 	elog.Info(0x40000003, config.ServiceName)
+	log.Info("Initialization complete.  Starting event loop")
 
 loop:
 	for {
@@ -80,20 +86,18 @@ loop:
 		case c := <-r:
 			switch c.Cmd {
 			case svc.Interrogate:
-				changes <- c.CurrentStatus
-				// Testing deadlock from https://code.google.com/p/winsvc/issues/detail?id=4
-				time.Sleep(100 * time.Millisecond)
+				log.Infof("SCM: Interrogate %v", c)
 				changes <- c.CurrentStatus
 			case svc.Stop:
 				log.Info("Received stop message from service control manager")
 				elog.Info(0x4000000c, config.ServiceName)
 				break loop
 			case svc.Shutdown:
-				log.Info("Received shutdown message from service control manager")
+				log.Infof("Received shutdown message from service control manager")
 				elog.Info(0x4000000d, config.ServiceName)
 				break loop
 			default:
-				log.Warnf("unexpected control request #%d", c)
+				log.Warnf("SCM: unexpected control request #%d", c)
 				elog.Warning(0xc0000009, string(c.Cmd))
 			}
 		case <-signals.Stopper:
