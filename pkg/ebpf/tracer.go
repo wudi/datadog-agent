@@ -152,7 +152,7 @@ func NewTracer(config *Config) (*Tracer, error) {
 
 	conntracker := netlink.NewNoOpConntracker()
 	if config.EnableConntrack {
-		if c, err := netlink.NewConntracker(config.ProcRoot, config.ConntrackShortTermBufferSize, int(config.MaxTrackedConnections)); err != nil {
+		if c, err := netlink.NewConntracker(config.ProcRoot, config.ConntrackShortTermBufferSize, int(config.ConntrackMaxStateSize)); err != nil {
 			log.Warnf("could not initialize conntrack, tracer will continue without NAT tracking: %s", err)
 		} else {
 			conntracker = c

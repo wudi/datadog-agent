@@ -30,6 +30,8 @@ var (
 	defaultSystemProbeFilePath = "/var/log/datadog/system-probe.log"
 
 	defaultConntrackShortTermBufferSize = 10000
+	// A size of 100000 should be roughly equivalent to 20MB
+	defaultConntrackMaxStateSize = 100000
 
 	processChecks   = []string{"process", "rtprocess"}
 	containerChecks = []string{"container", "rtcontainer"}
@@ -189,6 +191,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		EnableConntrack:              true,
 		ClosedChannelSize:            500,
 		ConntrackShortTermBufferSize: defaultConntrackShortTermBufferSize,
+		MaxConntrackStateSize:        defaultConntrackMaxStateSize,
 
 		// Check config
 		EnabledChecks: enabledChecks,
