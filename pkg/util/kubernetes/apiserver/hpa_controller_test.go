@@ -182,10 +182,11 @@ func TestUpdate(t *testing.T) {
 	// Start the DCA with already existing Data
 	// Check if nothing in local store and Global Store is full we update the Global Store metrics correctly
 	metricsToStore := map[string]custommetrics.ExternalMetricValue{
-		"external_metric-default-foo-metric1": {
+		"external_metric-horizontal-default-foo-metric1": {
 			MetricName: "metric1",
 			Labels:     map[string]string{"foo": "bar"},
 			Ref: custommetrics.ObjectReference{
+				Type:      "horizontal",
 				Name:      "foo",
 				Namespace: "default",
 			},
@@ -214,10 +215,11 @@ func TestUpdate(t *testing.T) {
 	// Fresh start
 	// Check if local store is not empty
 	hctrl.toStore.m.Lock()
-	hctrl.toStore.data["external_metric-default-foo-metric2"] = custommetrics.ExternalMetricValue{
+	hctrl.toStore.data["external_metric-horizontal-default-foo-metric2"] = custommetrics.ExternalMetricValue{
 		MetricName: "metric2",
 		Labels:     map[string]string{"foo": "bar"},
 		Ref: custommetrics.ObjectReference{
+			Type:      "horizontal",
 			Name:      "foo",
 			Namespace: "default",
 		},
@@ -234,10 +236,11 @@ func TestUpdate(t *testing.T) {
 	// Check that if there is conflicting info from the local store and the Global Store that we merge correctly
 	// Check conflict on metric name and labels
 	hctrl.toStore.m.Lock()
-	hctrl.toStore.data["external_metric-default-foo-metric2"] = custommetrics.ExternalMetricValue{
+	hctrl.toStore.data["external_metric-horizontal-default-foo-metric2"] = custommetrics.ExternalMetricValue{
 		MetricName: "metric2",
 		Labels:     map[string]string{"foo": "baz"},
 		Ref: custommetrics.ObjectReference{
+			Type:      "horizontal",
 			Name:      "foo",
 			Namespace: "default",
 		},
@@ -464,10 +467,10 @@ func TestAutoscalerControllerGC(t *testing.T) {
 		{
 			caseName: "hpa exists for metric",
 			metrics: map[string]custommetrics.ExternalMetricValue{
-				"external_metric-default-foo-requests_per_s": {
+				"external_metric-horizontal-default-foo-requests_per_s": {
 					MetricName: "requests_per_s",
 					Labels:     map[string]string{"bar": "baz"},
-					Ref:        custommetrics.ObjectReference{Name: "foo", Namespace: "default", UID: "1111"},
+					Ref:        custommetrics.ObjectReference{Type: "horizontal", Name: "foo", Namespace: "default", UID: "1111"},
 					Timestamp:  12,
 					Value:      1,
 					Valid:      false,
@@ -497,7 +500,7 @@ func TestAutoscalerControllerGC(t *testing.T) {
 				{
 					MetricName: "requests_per_s",
 					Labels:     map[string]string{"bar": "baz"},
-					Ref:        custommetrics.ObjectReference{Name: "foo", Namespace: "default", UID: "1111"},
+					Ref:        custommetrics.ObjectReference{Type: "horizontal", Name: "foo", Namespace: "default", UID: "1111"},
 					Timestamp:  12,
 					Value:      1,
 					Valid:      false,
@@ -507,10 +510,10 @@ func TestAutoscalerControllerGC(t *testing.T) {
 		{
 			caseName: "no hpa for metric",
 			metrics: map[string]custommetrics.ExternalMetricValue{
-				"external_metric-default-foo-requests_per_s_b": {
+				"external_metric-horizontal-default-foo-requests_per_s_b": {
 					MetricName: "requests_per_s_b",
 					Labels:     map[string]string{"bar": "baz"},
-					Ref:        custommetrics.ObjectReference{Name: "foo", Namespace: "default", UID: "1111"},
+					Ref:        custommetrics.ObjectReference{Type: "horizontal", Name: "foo", Namespace: "default", UID: "1111"},
 					Timestamp:  12,
 					Value:      1,
 					Valid:      false,
