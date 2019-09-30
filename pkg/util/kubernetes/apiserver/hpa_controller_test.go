@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/DataDog/datadog-agent/pkg/errors"
-	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/hpa"
+	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/autoscalers"
 	autoscalingv2 "k8s.io/api/autoscaling/v2beta1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
@@ -61,7 +61,7 @@ func newFakeHorizontalPodAutoscaler(name, ns string, uid string, metricName stri
 	}
 }
 
-func newFakeAutoscalerController(client kubernetes.Interface, itf LeaderElectorInterface, dcl hpa.DatadogClient) (*AutoscalersController, informers.SharedInformerFactory) {
+func newFakeAutoscalerController(client kubernetes.Interface, itf LeaderElectorInterface, dcl autoscalers.DatadogClient) (*AutoscalersController, informers.SharedInformerFactory) {
 	informerFactory := informers.NewSharedInformerFactory(client, 0)
 
 	autoscalerController, _ := NewAutoscalersController(
@@ -166,11 +166,11 @@ func TestUpdate(t *testing.T) {
 		},
 	}
 
-	hctrl, _ := newFakeAutoscalerController(client, alwaysLeader, hpa.DatadogClient(d))
+	hctrl, _ := newFakeAutoscalerController(client, alwaysLeader, autoscalers.DatadogClient(d))
 	hctrl.poller.refreshPeriod = 600
 	hctrl.poller.gcPeriodSeconds = 600
 	hctrl.autoscalers = make(chan interface{}, 1)
-	foo := hpa.ProcessorInterface(p)
+	foo := autoscalers.ProcessorInterface(p)
 	hctrl.hpaProc = foo
 
 	// Fresh start with no activity. Both the local cache and the Global Store are empty.
@@ -292,7 +292,7 @@ func TestAutoscalerController(t *testing.T) {
 			return ddSeries, nil
 		},
 	}
-	hctrl, inf := newFakeAutoscalerController(client, alwaysLeader, hpa.DatadogClient(d))
+	hctrl, inf := newFakeAutoscalerController(client, alwaysLeader, autoscalers.DatadogClient(d))
 	hctrl.poller.refreshPeriod = 600
 	hctrl.poller.gcPeriodSeconds = 600
 	hctrl.autoscalers = make(chan interface{}, 1)
@@ -382,7 +382,7 @@ func TestAutoscalerController(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, storedHPA, mockedHPA)
 	// Checking the local cache holds the correct Data.
-	ExtVal := hpa.Inspect(storedHPA)
+	ExtVal := autoscalers.InspectHPA(storedHPA)
 	key := custommetrics.ExternalMetricValueKeyFunc(ExtVal[0])
 
 	// Process and submit to the Global Store

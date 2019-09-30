@@ -22,7 +22,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/custommetrics"
 	"github.com/DataDog/datadog-agent/pkg/errors"
-	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/hpa"
+	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/autoscalers"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 
 )
@@ -63,7 +63,7 @@ type AutoscalersController struct {
 	autoscalers chan interface{}
 
 	toStore   metricsBatch
-	hpaProc   hpa.ProcessorInterface
+	hpaProc   autoscalers.ProcessorInterface
 	store     custommetrics.Store
 	clientSet kubernetes.Interface
 	poller    PollerConfig
@@ -147,7 +147,7 @@ func (h *AutoscalersController) syncAutoscalers(key interface{}) error {
 			log.Errorf("Could not parse empty hpa %s/%s from local store", ns, name)
 			return ErrIsEmpty
 		}
-		emList := hpa.Inspect(hpaCached)
+		emList := autoscalers.InspectHPA(hpaCached)
 		new := h.hpaProc.ProcessEMList(emList)
 		h.toStore.m.Lock()
 		for metric, value := range new {
@@ -188,12 +188,12 @@ func (h *AutoscalersController) updateAutoscaler(old, obj interface{}) {
 		return
 	}
 
-	if !hpa.AutoscalerMetricsUpdate(newAutoscaler, oldAutoscaler) {
+	if !autoscalers.AutoscalerMetricsUpdate(newAutoscaler, oldAutoscaler) {
 		log.Tracef("Update received for the %s/%s, without a relevant change to the configuration", newAutoscaler.Namespace, newAutoscaler.Name)
 		return
 	}
 	// Need to delete the old object from the local cache. If the labels have changed, the syncAutoscaler would not override the old key.
-	toDelete := hpa.Inspect(oldAutoscaler)
+	toDelete := autoscalers.InspectHPA(oldAutoscaler)
 	h.deleteFromLocalStore(toDelete)
 
 	log.Tracef("Processing update event for autoscaler %s/%s with configuration: %s", newAutoscaler.Namespace, newAutoscaler.Name, newAutoscaler.Annotations)
@@ -210,7 +210,7 @@ func (h *AutoscalersController) deleteAutoscaler(obj interface{}) {
 
 	deletedHPA, ok := obj.(*autoscalingv2.HorizontalPodAutoscaler)
 	if ok {
-		toDelete := hpa.Inspect(deletedHPA)
+		toDelete := autoscalers.InspectHPA(deletedHPA)
 		h.deleteFromLocalStore(toDelete)
 		log.Debugf("Deleting %s/%s from the local cache", deletedHPA.Namespace, deletedHPA.Name)
 		if !h.le.IsLeader() {
@@ -237,7 +237,7 @@ func (h *AutoscalersController) deleteAutoscaler(obj interface{}) {
 	}
 
 	log.Debugf("Deleting Metrics from Ref %s/%s", deletedHPA.Namespace, deletedHPA.Name)
-	toDelete := hpa.Inspect(deletedHPA)
+	toDelete := autoscalers.InspectHPA(deletedHPA)
 	log.Debugf("Deleting %s/%s from the local cache", deletedHPA.Namespace, deletedHPA.Name)
 	h.deleteFromLocalStore(toDelete)
 	if err := h.store.DeleteExternalMetricValues(toDelete); err != nil {
