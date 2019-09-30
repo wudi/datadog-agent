@@ -15,7 +15,9 @@ import (
 	"github.com/kubernetes-incubator/custom-metrics-apiserver/pkg/apiserver"
 	basecmd "github.com/kubernetes-incubator/custom-metrics-apiserver/pkg/cmd"
 	"github.com/kubernetes-incubator/custom-metrics-apiserver/pkg/provider"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
@@ -101,8 +103,21 @@ func (o *DatadogMetricsAdapter) Config() (*apiserver.Config, error) {
 	}
 
 	scheme := runtime.NewScheme()
-	log.Infof("schema is %v", scheme.Name())
 	codecs := serializer.NewCodecFactory(scheme)
+
+	// we need to add the options to empty v1
+	// TODO fix the server code to avoid this
+	metav1.AddToGroupVersion(scheme, schema.GroupVersion{Version: "v1"})
+
+	// TODO: keep the generic API server from wanting this
+	unversioned := schema.GroupVersion{Group: "", Version: "v1"}
+	scheme.AddUnversionedTypes(unversioned,
+		&metav1.Status{},
+		&metav1.APIVersions{},
+		&metav1.APIGroupList{},
+		&metav1.APIGroup{},
+		&metav1.APIResourceList{},
+	)
 	serverConfig := genericapiserver.NewConfig(codecs)
 
 	err := o.SecureServing.ApplyTo(&serverConfig.SecureServing, &serverConfig.LoopbackClientConfig)
@@ -110,18 +125,15 @@ func (o *DatadogMetricsAdapter) Config() (*apiserver.Config, error) {
 		log.Errorf("Error while converting SecureServing type %v", err)
 		return nil, err
 	}
-
 	// Get the certificates from the extension-apiserver-authentication ConfigMap
 	if err := o.Authentication.ApplyTo(&serverConfig.Authentication, serverConfig.SecureServing, nil); err != nil {
 		log.Errorf("Could not create Authentication configuration: %v", err)
 		return nil, err
 	}
-
 	if err := o.Authorization.ApplyTo(&serverConfig.Authorization); err != nil {
 		log.Infof("Could not create Authorization configuration: %v", err)
 		return nil, err
 	}
-
 	return &apiserver.Config{
 		GenericConfig: serverConfig,
 	}, nil
