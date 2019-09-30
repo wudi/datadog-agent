@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	v1alpha12 "github.com/DataDog/watermarkpodautoscaler/pkg/client/listers/datadoghq/v1alpha1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2beta1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	autoscalersinformer "k8s.io/client-go/informers/autoscaling/v2beta1"
@@ -18,13 +19,11 @@ import (
 	autoscalerslister "k8s.io/client-go/listers/autoscaling/v2beta1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	v1alpha12 "github.com/DataDog/watermarkpodautoscaler/pkg/client/listers/datadoghq/v1alpha1"
 
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/custommetrics"
 	"github.com/DataDog/datadog-agent/pkg/errors"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/autoscalers"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
-
 )
 
 const (
@@ -96,7 +95,6 @@ func ExtendToHPAController(h *AutoscalersController, autoscalingInformer autosca
 	h.autoscalersLister = autoscalingInformer.Lister()
 	h.autoscalersListerSynced = autoscalingInformer.Informer().HasSynced
 }
-
 
 func (h *AutoscalersController) worker() {
 	for h.processNext() {
