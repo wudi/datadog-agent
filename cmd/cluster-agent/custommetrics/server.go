@@ -101,6 +101,7 @@ func (o *DatadogMetricsAdapter) Config() (*apiserver.Config, error) {
 	}
 
 	scheme := runtime.NewScheme()
+	log.Infof("schema is %v", scheme.Name())
 	codecs := serializer.NewCodecFactory(scheme)
 	serverConfig := genericapiserver.NewConfig(codecs)
 
