@@ -105,17 +105,18 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32) ([]model.
 	return batchConnections(cfg, groupID, c.enrichConnections(conns), c.networkID), nil
 }
 
-func (c *ConnectionsCheck) getConnections() ([]*model.Connection, error) {
+func (c *ConnectionsCheck) getConnections() (*model.Connections, error) {
 	if c.useLocalTracer { // If local tracer is set up, use that
 		if c.localTracer == nil {
 			return nil, fmt.Errorf("using local system probe, but no tracer was initialized")
 		}
 		cs, err := c.localTracer.GetActiveConnections(c.tracerClientID)
+		dns := encoding.FormatDNS(cs.DNS)
 		conns := make([]*model.Connection, len(cs.Conns))
 		for i, ebpfConn := range cs.Conns {
 			conns[i] = encoding.FormatConnection(ebpfConn)
 		}
-		return conns, err
+		return &model.Connections{Conns: conns, Dns: dns}, err
 	}
 
 	tu, err := net.GetRemoteSystemProbeUtil()
