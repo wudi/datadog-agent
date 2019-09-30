@@ -1,0 +1,3 @@
+.template_before: &template_before
+  before_script:
+    - echo "pre-script works"

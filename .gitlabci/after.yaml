@@ -1,0 +1,3 @@
+.template_after: &template_after
+  after_script:
+    - echo "post-script works"
