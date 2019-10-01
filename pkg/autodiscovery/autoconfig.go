@@ -544,10 +544,6 @@ func (ac *AutoConfig) resolveTemplateForService(tpl integration.Config, svc list
 
 // GetLoadedConfigs returns configs loaded
 func (ac *AutoConfig) GetLoadedConfigs() map[string]integration.Config {
-	if ac == nil || ac.store == nil {
-		log.Error("Autoconfig store not initialized")
-		return map[string]integration.Config{}
-	}
 	return ac.store.getLoadedConfigs()
 }
 
