@@ -60,7 +60,7 @@ func NewDestination(endpoint config.Endpoint, contentType string, destinationsCo
 func (d *Destination) Send(payload []byte) error {
 	ctx := d.destinationsContext.Context()
 
-	encodedPayload, err := d.contentEncoding.apply(payload)
+	encodedPayload, err := d.contentEncoding.encode(payload)
 	if err != nil {
 		return err
 	}

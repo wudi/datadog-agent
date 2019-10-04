@@ -13,7 +13,7 @@ import (
 // ContentEncoding encodes the payload
 type ContentEncoding interface {
 	name() string
-	apply(payload []byte) ([]byte, error)
+	encode(payload []byte) ([]byte, error)
 }
 
 // IdentityContentType encodes the payload using the identity function
@@ -25,7 +25,7 @@ func (c *identityContentType) name() string {
 	return "identity"
 }
 
-func (c *identityContentType) apply(payload []byte) ([]byte, error) {
+func (c *identityContentType) encode(payload []byte) ([]byte, error) {
 	return payload, nil
 }
 
@@ -51,7 +51,7 @@ func (c *GzipContentEncoding) name() string {
 	return "gzip"
 }
 
-func (c *GzipContentEncoding) apply(payload []byte) ([]byte, error) {
+func (c *GzipContentEncoding) encode(payload []byte) ([]byte, error) {
 	var compressedPayload bytes.Buffer
 	gzipWriter, err := gzip.NewWriterLevel(&compressedPayload, c.level)
 	if err != nil {

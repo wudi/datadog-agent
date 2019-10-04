@@ -16,7 +16,7 @@ import (
 func TestIdentityContentType(t *testing.T) {
 	payload := []byte("my payload")
 
-	encodedPayload, err := IdentityContentType.apply(payload)
+	encodedPayload, err := IdentityContentType.encode(payload)
 	assert.Nil(t, err)
 
 	assert.Equal(t, payload, encodedPayload)
@@ -29,7 +29,7 @@ func TestIdentityContentTypeName(t *testing.T) {
 func TestGzipContentEncoding(t *testing.T) {
 	payload := []byte("my payload")
 
-	encodedPayload, err := NewGzipContentEncoding(gzip.BestCompression).apply(payload)
+	encodedPayload, err := NewGzipContentEncoding(gzip.BestCompression).encode(payload)
 	assert.Nil(t, err)
 
 	decompressedPayload, err := decompress(encodedPayload)
