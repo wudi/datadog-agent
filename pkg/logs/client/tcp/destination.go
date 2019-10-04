@@ -59,7 +59,7 @@ func (d *Destination) Send(payload []byte) error {
 	}
 
 	metrics.BytesSent.Add(int64(len(payload)))
-	metrics.CompressedBytesSent.Add(int64(len(payload)))
+	metrics.EncodedBytesSent.Add(int64(len(payload)))
 
 	content := d.prefixer.apply(payload)
 	frame, err := d.delimiter.delimit(content)

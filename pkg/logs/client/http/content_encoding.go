@@ -8,46 +8,50 @@ package http
 import (
 	"bytes"
 	"compress/gzip"
-	"net/http"
 )
 
-// Compression compresses the payload
-type Compression interface {
-	compress(payload []byte) ([]byte, error)
-	setHeader(header *http.Header)
+// ContentEncoding encodes the payload
+type ContentEncoding interface {
+	name() string
+	apply(payload []byte) ([]byte, error)
 }
 
-// NoCompression does not compress the payload
-var NoCompression Compression = &noCompression{}
+// IdentityContentType encodes the payload using the identity function
+var IdentityContentType ContentEncoding = &identityContentType{}
 
-type noCompression struct{}
+type identityContentType struct{}
 
-func (c *noCompression) compress(payload []byte) ([]byte, error) {
+func (c *identityContentType) name() string {
+	return "identity"
+}
+
+func (c *identityContentType) apply(payload []byte) ([]byte, error) {
 	return payload, nil
 }
 
-func (c *noCompression) setHeader(header *http.Header) {
-}
-
-// GzipCompression compresses the payload using Gzip algorithm
-type GzipCompression struct {
+// GzipContentEncoding encodes the payload using gzip algorithm
+type GzipContentEncoding struct {
 	level int
 }
 
-// NewGzipCompression creates a new Gzip compression
-func NewGzipCompression(level int) *GzipCompression {
+// NewGzipContentEncoding creates a new Gzip content type
+func NewGzipContentEncoding(level int) *GzipContentEncoding {
 	if level < gzip.NoCompression {
 		level = gzip.NoCompression
 	} else if level > gzip.BestCompression {
 		level = gzip.BestCompression
 	}
 
-	return &GzipCompression{
+	return &GzipContentEncoding{
 		level,
 	}
 }
 
-func (c *GzipCompression) compress(payload []byte) ([]byte, error) {
+func (c *GzipContentEncoding) name() string {
+	return "gzip"
+}
+
+func (c *GzipContentEncoding) apply(payload []byte) ([]byte, error) {
 	var compressedPayload bytes.Buffer
 	gzipWriter, err := gzip.NewWriterLevel(&compressedPayload, c.level)
 	if err != nil {
@@ -66,8 +70,4 @@ func (c *GzipCompression) compress(payload []byte) ([]byte, error) {
 		return nil, err
 	}
 	return compressedPayload.Bytes(), nil
-}
-
-func (c *GzipCompression) setHeader(header *http.Header) {
-	header.Set("Content-Encoding", "gzip")
 }

@@ -32,7 +32,7 @@ var (
 type Destination struct {
 	url                 string
 	contentType         string
-	compression         Compression
+	contentEncoding     ContentEncoding
 	client              *http.Client
 	destinationsContext *client.DestinationsContext
 	once                sync.Once
@@ -43,9 +43,9 @@ type Destination struct {
 // TODO: add support for SOCKS5
 func NewDestination(endpoint config.Endpoint, contentType string, destinationsContext *client.DestinationsContext) *Destination {
 	return &Destination{
-		url:         buildURL(endpoint),
-		contentType: contentType,
-		compression: buildCompression(endpoint),
+		url:             buildURL(endpoint),
+		contentType:     contentType,
+		contentEncoding: buildContentEncoding(endpoint),
 		client: &http.Client{
 			Timeout: time.Second * 10,
 			// reusing core agent HTTP transport to benefit from proxy settings.
@@ -60,21 +60,21 @@ func NewDestination(endpoint config.Endpoint, contentType string, destinationsCo
 func (d *Destination) Send(payload []byte) error {
 	ctx := d.destinationsContext.Context()
 
-	compressedPayload, err := d.compression.compress(payload)
+	encodedPayload, err := d.contentEncoding.apply(payload)
 	if err != nil {
 		return err
 	}
 	metrics.BytesSent.Add(int64(len(payload)))
-	metrics.CompressedBytesSent.Add(int64(len(compressedPayload)))
+	metrics.EncodedBytesSent.Add(int64(len(encodedPayload)))
 
-	req, err := http.NewRequest("POST", d.url, bytes.NewReader(compressedPayload))
+	req, err := http.NewRequest("POST", d.url, bytes.NewReader(encodedPayload))
 	if err != nil {
 		// the request could not be built,
 		// this can happen when the method or the url are valid.
 		return err
 	}
 	req.Header.Set("Content-Type", d.contentType)
-	d.compression.setHeader(&req.Header)
+	req.Header.Set("Content-Encoding", d.contentEncoding.name())
 	req = req.WithContext(ctx)
 
 	resp, err := d.client.Do(req)
@@ -149,9 +149,9 @@ func buildURL(endpoint config.Endpoint) string {
 	return fmt.Sprintf("%v://%v/v1/input/%v", scheme, address, endpoint.APIKey)
 }
 
-func buildCompression(endpoint config.Endpoint) Compression {
+func buildContentEncoding(endpoint config.Endpoint) ContentEncoding {
 	if endpoint.UseCompression {
-		return NewGzipCompression(endpoint.CompressionLevel)
+		return NewGzipContentEncoding(endpoint.CompressionLevel)
 	}
-	return NoCompression
+	return IdentityContentType
 }

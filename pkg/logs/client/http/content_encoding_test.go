@@ -8,47 +8,38 @@ package http
 import (
 	"bytes"
 	"compress/gzip"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNoCompression(t *testing.T) {
+func TestIdentityContentType(t *testing.T) {
 	payload := []byte("my payload")
 
-	compressedPayload, err := NoCompression.compress(payload)
+	encodedPayload, err := IdentityContentType.apply(payload)
 	assert.Nil(t, err)
 
-	assert.Equal(t, payload, compressedPayload)
+	assert.Equal(t, payload, encodedPayload)
 }
 
-func TestNoCompressionHeader(t *testing.T) {
-	header := make(http.Header)
-
-	NoCompression.setHeader(&header)
-
-	assert.Empty(t, header.Get("Content-Encoding"))
+func TestIdentityContentTypeName(t *testing.T) {
+	assert.Equal(t, IdentityContentType.name(), "identity")
 }
 
-func TestGzipCompression(t *testing.T) {
+func TestGzipContentEncoding(t *testing.T) {
 	payload := []byte("my payload")
 
-	compressedPayload, err := NewGzipCompression(gzip.BestCompression).compress(payload)
+	encodedPayload, err := NewGzipContentEncoding(gzip.BestCompression).apply(payload)
 	assert.Nil(t, err)
 
-	decompressedPayload, err := decompress(compressedPayload)
+	decompressedPayload, err := decompress(encodedPayload)
 	assert.Nil(t, err)
 
 	assert.Equal(t, payload, decompressedPayload)
 }
 
-func TestGzipCompressionHeader(t *testing.T) {
-	header := make(http.Header)
-
-	NewGzipCompression(gzip.BestCompression).setHeader(&header)
-
-	assert.Equal(t, header.Get("Content-Encoding"), "gzip")
+func TestGzipContentEncodingName(t *testing.T) {
+	assert.Equal(t, NewGzipContentEncoding(gzip.BestCompression).name(), "gzip")
 }
 
 func decompress(payload []byte) ([]byte, error) {
