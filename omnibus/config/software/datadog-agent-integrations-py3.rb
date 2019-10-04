@@ -251,6 +251,12 @@ build do
         end
       end
 
+      # Copy SNMP profiles
+      Dir.glob("#{check_dir}/datadog_checks/#{check}/data/*.profile").each do |profile|
+        profile_filename = File.basename(profile)
+        copy profile, "#{check_conf_dir}/" unless File.exist? "#{check_conf_dir}/#{profile_filename}"
+      end
+
       File.file?("#{check_dir}/setup.py") || next
       if windows?
         command "#{python} -m pip install --no-deps #{windows_safe_path(project_dir)}\\#{check}"
