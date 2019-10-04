@@ -24,6 +24,8 @@ const (
 	httpEndpointPrefix = "agent-http-intake.logs."
 )
 
+const defaultCompressionLevel = 6
+
 // logs-intake endpoints depending on the site and environment.
 var logsEndpoints = map[string]int{
 	"agent-intake.logs.datadoghq.com": 10516,
@@ -135,8 +137,15 @@ func buildTCPEndpoints() (*Endpoints, error) {
 }
 
 func buildHTTPEndpoints() (*Endpoints, error) {
+	compressionLevel := defaultCompressionLevel
+	if coreConfig.Datadog.IsSet("logs_config.compression_level") {
+		compressionLevel = coreConfig.Datadog.GetInt("logs_config.compression_level")
+	}
+
 	main := Endpoint{
-		APIKey: getLogsAPIKey(coreConfig.Datadog),
+		APIKey:           getLogsAPIKey(coreConfig.Datadog),
+		UseCompression:   coreConfig.Datadog.GetBool("logs_config.use_compression"),
+		CompressionLevel: compressionLevel,
 	}
 
 	switch {
